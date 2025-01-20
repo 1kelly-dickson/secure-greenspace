@@ -1,31 +1,47 @@
 import EncryptionCard from "@/components/EncryptionCard";
-import { Shield, Lock, History, Download, Share2 } from "lucide-react";
+import { Shield, Lock, History, Download, Share2, Info, FileText, Settings, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Index = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-primary-light to-white">
       {/* Hero Section */}
       <header className="py-12 px-4 sm:px-6 md:px-8 text-center">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">Secure Text Encryption</h1>
-        <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
-          Encrypt and decrypt your sensitive text using strong AES-256 encryption.
-          Your data never leaves your browser.
-        </p>
-        <div className="flex justify-center gap-4 mb-12">
-          <Button size="lg" className="gap-2">
-            <Lock className="w-4 h-4" />
-            Get Started
-          </Button>
-          <Button variant="outline" size="lg" className="gap-2">
-            Learn More
-          </Button>
+        <div className="animate-fade-in">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">Secure Text Encryption</h1>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
+            Encrypt and decrypt your sensitive text using strong AES-256 encryption.
+            Your data never leaves your browser.
+          </p>
+          <div className="flex flex-wrap justify-center gap-4 mb-12">
+            <Button size="lg" className="gap-2">
+              <Lock className="w-4 h-4" />
+              Get Started
+            </Button>
+            <Button variant="outline" size="lg" className="gap-2">
+              Learn More
+            </Button>
+          </div>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-        <EncryptionCard />
+        <Tabs defaultValue="encrypt" className="space-y-8">
+          <TabsList className="grid w-full max-w-md mx-auto grid-cols-2">
+            <TabsTrigger value="encrypt">Encrypt</TabsTrigger>
+            <TabsTrigger value="decrypt">Decrypt</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="encrypt" className="space-y-8">
+            <EncryptionCard />
+          </TabsContent>
+
+          <TabsContent value="decrypt" className="space-y-8">
+            <EncryptionCard />
+          </TabsContent>
+        </Tabs>
 
         {/* Features Section */}
         <section className="py-16">
@@ -45,6 +61,59 @@ const Index = () => {
               icon={Download}
               title="Export & Backup"
               description="Save your encrypted data locally for future reference."
+            />
+          </div>
+        </section>
+
+        {/* How It Works Section */}
+        <section className="py-16 bg-white rounded-lg shadow-sm">
+          <h2 className="text-2xl font-bold text-center mb-8">How It Works</h2>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 px-6">
+            <StepCard
+              number="1"
+              title="Enter Text"
+              description="Type or paste your sensitive text into the secure input field."
+            />
+            <StepCard
+              number="2"
+              title="Set Password"
+              description="Choose a strong password to encrypt your data."
+            />
+            <StepCard
+              number="3"
+              title="Encrypt/Decrypt"
+              description="Process your text with military-grade encryption."
+            />
+            <StepCard
+              number="4"
+              title="Share Securely"
+              description="Share the encrypted text through any channel."
+            />
+          </div>
+        </section>
+
+        {/* Quick Actions */}
+        <section className="py-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <QuickActionCard
+              icon={FileText}
+              title="File Encryption"
+              description="Coming soon: Encrypt files up to 10MB"
+            />
+            <QuickActionCard
+              icon={Share2}
+              title="Secure Sharing"
+              description="Share encrypted content safely"
+            />
+            <QuickActionCard
+              icon={Settings}
+              title="Preferences"
+              description="Customize your encryption settings"
+            />
+            <QuickActionCard
+              icon={HelpCircle}
+              title="Help & Support"
+              description="Get assistance when needed"
             />
           </div>
         </section>
@@ -106,6 +175,36 @@ const FeatureCard = ({ icon: Icon, title, description }: { icon: any; title: str
       </div>
       <h3 className="text-lg font-semibold mb-2">{title}</h3>
       <p className="text-gray-600">{description}</p>
+    </div>
+  );
+};
+
+// Step Card Component
+const StepCard = ({ number, title, description }: { number: string; title: string; description: string }) => {
+  return (
+    <div className="text-center">
+      <div className="w-10 h-10 bg-primary text-white rounded-full flex items-center justify-center mx-auto mb-4">
+        {number}
+      </div>
+      <h3 className="font-semibold mb-2">{title}</h3>
+      <p className="text-sm text-gray-600">{description}</p>
+    </div>
+  );
+};
+
+// Quick Action Card Component
+const QuickActionCard = ({ icon: Icon, title, description }: { icon: any; title: string; description: string }) => {
+  return (
+    <div className="p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
+      <div className="flex items-start space-x-4">
+        <div className="p-2 bg-primary/10 rounded-lg">
+          <Icon className="w-5 h-5 text-primary" />
+        </div>
+        <div>
+          <h3 className="font-semibold mb-1">{title}</h3>
+          <p className="text-sm text-gray-600">{description}</p>
+        </div>
+      </div>
     </div>
   );
 };
