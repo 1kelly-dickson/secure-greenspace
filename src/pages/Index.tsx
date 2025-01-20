@@ -1,4 +1,5 @@
 import EncryptionCard from "@/components/EncryptionCard";
+import SecureMessaging from "@/components/SecureMessaging";
 import { Shield, Lock, History, Download, Share2, Info, FileText, Settings, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -29,9 +30,10 @@ const Index = () => {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
         <Tabs defaultValue="encrypt" className="space-y-8">
-          <TabsList className="grid w-full max-w-md mx-auto grid-cols-2">
+          <TabsList className="grid w-full max-w-md mx-auto grid-cols-3">
             <TabsTrigger value="encrypt">Encrypt</TabsTrigger>
             <TabsTrigger value="decrypt">Decrypt</TabsTrigger>
+            <TabsTrigger value="message">Message</TabsTrigger>
           </TabsList>
 
           <TabsContent value="encrypt" className="space-y-8">
@@ -40,6 +42,10 @@ const Index = () => {
 
           <TabsContent value="decrypt" className="space-y-8">
             <EncryptionCard />
+          </TabsContent>
+
+          <TabsContent value="message" className="space-y-8">
+            <SecureMessaging />
           </TabsContent>
         </Tabs>
 

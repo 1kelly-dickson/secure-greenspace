@@ -6,12 +6,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Lock, Unlock, Copy, RefreshCw, Download, Share2, History, Settings } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import AlgorithmSelector from "./AlgorithmSelector";
 
 const EncryptionCard = () => {
   const [text, setText] = useState("");
   const [password, setPassword] = useState("");
   const [result, setResult] = useState("");
   const [mode, setMode] = useState<"encrypt" | "decrypt">("encrypt");
+  const [algorithm, setAlgorithm] = useState("aes-256");
   const [history, setHistory] = useState<Array<{ text: string; mode: string; date: Date }>>([]);
   const { toast } = useToast();
 
@@ -151,6 +153,15 @@ const EncryptionCard = () => {
             <TabsTrigger value="encrypt" onClick={() => setMode("encrypt")}>Encrypt</TabsTrigger>
             <TabsTrigger value="decrypt" onClick={() => setMode("decrypt")}>Decrypt</TabsTrigger>
           </TabsList>
+
+          <div className="space-y-4 mb-4">
+            <label className="text-sm font-medium">Algorithm</label>
+            <AlgorithmSelector
+              value={algorithm}
+              onChange={setAlgorithm}
+              type={mode === "encrypt" ? "encrypt" : undefined}
+            />
+          </div>
 
           <TabsContent value="encrypt" className="space-y-4">
             <div className="space-y-2">
