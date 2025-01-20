@@ -4,13 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Lock, Unlock, Copy, RefreshCw } from "lucide-react";
+import { Lock, Unlock, Copy, RefreshCw, Download, Share2, History, Settings } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const EncryptionCard = () => {
   const [text, setText] = useState("");
   const [password, setPassword] = useState("");
   const [result, setResult] = useState("");
   const [mode, setMode] = useState<"encrypt" | "decrypt">("encrypt");
+  const [history, setHistory] = useState<Array<{ text: string; mode: string; date: Date }>>([]);
   const { toast } = useToast();
 
   const handleOperation = async () => {
@@ -70,6 +72,13 @@ const EncryptionCard = () => {
         setResult(new TextDecoder().decode(decrypted));
       }
 
+      // Add to history
+      setHistory(prev => [{
+        text: text.substring(0, 50) + (text.length > 50 ? "..." : ""),
+        mode,
+        date: new Date()
+      }, ...prev.slice(0, 9)]);
+
       toast({
         title: `${mode === "encrypt" ? "Encryption" : "Decryption"} successful`,
         description: "Your text has been processed successfully",
@@ -97,8 +106,25 @@ const EncryptionCard = () => {
     setResult("");
   };
 
+  const downloadResult = () => {
+    const blob = new Blob([result], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${mode === 'encrypt' ? 'encrypted' : 'decrypted'}_text.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    
+    toast({
+      title: "Downloaded!",
+      description: "Your file has been downloaded successfully",
+    });
+  };
+
   return (
-    <Card className="w-full max-w-2xl mx-auto shadow-lg animate-fade-in">
+    <Card className="w-full max-w-2xl mx-auto shadow-lg">
       <CardHeader className="space-y-1">
         <CardTitle className="text-2xl text-center flex items-center justify-center gap-2">
           {mode === "encrypt" ? (
@@ -119,60 +145,111 @@ const EncryptionCard = () => {
             : "Decrypt your previously encrypted text"}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Textarea
-            placeholder={`Enter text to ${mode}...`}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            className="min-h-[100px] resize-none"
-          />
-        </div>
-        <div className="space-y-2">
-          <Input
-            type="password"
-            placeholder="Enter password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </div>
-        <div className="flex gap-2">
-          <Button
-            onClick={handleOperation}
-            className="flex-1 bg-primary hover:bg-primary-dark"
-          >
-            {mode === "encrypt" ? "Encrypt" : "Decrypt"}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => setMode(mode === "encrypt" ? "decrypt" : "encrypt")}
-          >
-            Switch to {mode === "encrypt" ? "Decrypt" : "Encrypt"}
-          </Button>
-        </div>
-        {result && (
-          <div className="space-y-2">
-            <div className="relative">
+      <CardContent>
+        <Tabs defaultValue="encrypt" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="encrypt" onClick={() => setMode("encrypt")}>Encrypt</TabsTrigger>
+            <TabsTrigger value="decrypt" onClick={() => setMode("decrypt")}>Decrypt</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="encrypt" className="space-y-4">
+            <div className="space-y-2">
               <Textarea
-                value={result}
-                readOnly
-                className="min-h-[100px] resize-none pr-10"
+                placeholder="Enter text to encrypt..."
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                className="min-h-[100px] resize-none"
               />
-              <Button
-                size="icon"
-                variant="ghost"
-                className="absolute top-2 right-2"
-                onClick={copyToClipboard}
-              >
-                <Copy className="w-4 h-4" />
-              </Button>
             </div>
-            <Button variant="outline" onClick={clearAll} className="w-full">
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Clear All
+            <div className="space-y-2">
+              <Input
+                type="password"
+                placeholder="Enter password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="decrypt" className="space-y-4">
+            <div className="space-y-2">
+              <Textarea
+                placeholder="Enter text to decrypt..."
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                className="min-h-[100px] resize-none"
+              />
+            </div>
+            <div className="space-y-2">
+              <Input
+                type="password"
+                placeholder="Enter password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+          </TabsContent>
+
+          <div className="flex gap-2 mt-4">
+            <Button onClick={handleOperation} className="flex-1">
+              {mode === "encrypt" ? "Encrypt" : "Decrypt"}
+            </Button>
+            <Button variant="outline" onClick={clearAll}>
+              <RefreshCw className="w-4 h-4" />
             </Button>
           </div>
-        )}
+
+          {result && (
+            <div className="space-y-2 mt-4">
+              <div className="relative">
+                <Textarea
+                  value={result}
+                  readOnly
+                  className="min-h-[100px] resize-none pr-10"
+                />
+                <div className="absolute top-2 right-2 flex gap-2">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={copyToClipboard}
+                    className="h-8 w-8"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={downloadResult}
+                    className="h-8 w-8"
+                  >
+                    <Download className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* History Section */}
+          {history.length > 0 && (
+            <div className="mt-6 border-t pt-4">
+              <h3 className="text-sm font-medium mb-2 flex items-center gap-2">
+                <History className="w-4 h-4" />
+                Recent Activity
+              </h3>
+              <div className="space-y-2">
+                {history.map((item, index) => (
+                  <div key={index} className="text-sm text-gray-600 flex items-center justify-between">
+                    <span>{item.text}</span>
+                    <span className="text-xs text-gray-400">
+                      {item.mode === 'encrypt' ? 'Encrypted' : 'Decrypted'} •{' '}
+                      {new Date(item.date).toLocaleTimeString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </Tabs>
       </CardContent>
     </Card>
   );

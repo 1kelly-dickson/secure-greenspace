@@ -1,18 +1,111 @@
 import EncryptionCard from "@/components/EncryptionCard";
+import { Shield, Lock, History, Download, Share2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-primary-light to-white p-4 sm:p-6 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
-        <div className="text-center space-y-4">
-          <h1 className="text-4xl font-bold text-gray-900">Secure Text Encryption</h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Encrypt and decrypt your sensitive text using strong AES-256 encryption.
-            Your data never leaves your browser.
-          </p>
+    <div className="min-h-screen bg-gradient-to-b from-primary-light to-white">
+      {/* Hero Section */}
+      <header className="py-12 px-4 sm:px-6 md:px-8 text-center">
+        <h1 className="text-4xl font-bold text-gray-900 mb-4">Secure Text Encryption</h1>
+        <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
+          Encrypt and decrypt your sensitive text using strong AES-256 encryption.
+          Your data never leaves your browser.
+        </p>
+        <div className="flex justify-center gap-4 mb-12">
+          <Button size="lg" className="gap-2">
+            <Lock className="w-4 h-4" />
+            Get Started
+          </Button>
+          <Button variant="outline" size="lg" className="gap-2">
+            Learn More
+          </Button>
         </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
         <EncryptionCard />
+
+        {/* Features Section */}
+        <section className="py-16">
+          <h2 className="text-2xl font-bold text-center mb-12">Key Features</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <FeatureCard
+              icon={Shield}
+              title="Military-Grade Encryption"
+              description="AES-256 encryption ensures your data remains secure and private."
+            />
+            <FeatureCard
+              icon={History}
+              title="Encryption History"
+              description="Keep track of your recent encryption activities securely."
+            />
+            <FeatureCard
+              icon={Download}
+              title="Export & Backup"
+              description="Save your encrypted data locally for future reference."
+            />
+          </div>
+        </section>
+
+        {/* Security Info */}
+        <section className="py-12 text-center">
+          <h2 className="text-2xl font-bold mb-6">Your Security is Our Priority</h2>
+          <p className="text-gray-600 max-w-2xl mx-auto">
+            All encryption and decryption happens directly in your browser.
+            We never store or transmit your sensitive data.
+          </p>
+        </section>
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-gray-50 py-12 mt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div>
+              <h3 className="font-semibold mb-4">Quick Links</h3>
+              <ul className="space-y-2">
+                <li><a href="#" className="text-gray-600 hover:text-gray-900">Home</a></li>
+                <li><a href="#" className="text-gray-600 hover:text-gray-900">Features</a></li>
+                <li><a href="#" className="text-gray-600 hover:text-gray-900">Security</a></li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="font-semibold mb-4">Resources</h3>
+              <ul className="space-y-2">
+                <li><a href="#" className="text-gray-600 hover:text-gray-900">Documentation</a></li>
+                <li><a href="#" className="text-gray-600 hover:text-gray-900">API</a></li>
+                <li><a href="#" className="text-gray-600 hover:text-gray-900">Support</a></li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="font-semibold mb-4">Contact</h3>
+              <ul className="space-y-2">
+                <li><a href="#" className="text-gray-600 hover:text-gray-900">Email Us</a></li>
+                <li><a href="#" className="text-gray-600 hover:text-gray-900">Twitter</a></li>
+                <li><a href="#" className="text-gray-600 hover:text-gray-900">GitHub</a></li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t border-gray-200 mt-8 pt-8 text-center text-gray-600">
+            <p>&copy; 2024 Secure Encryption. All rights reserved.</p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+};
+
+// Feature Card Component
+const FeatureCard = ({ icon: Icon, title, description }: { icon: any; title: string; description: string }) => {
+  return (
+    <div className="p-6 bg-white rounded-lg shadow-md text-center">
+      <div className="inline-block p-3 bg-primary/10 rounded-full mb-4">
+        <Icon className="w-6 h-6 text-primary" />
       </div>
+      <h3 className="text-lg font-semibold mb-2">{title}</h3>
+      <p className="text-gray-600">{description}</p>
     </div>
   );
 };
