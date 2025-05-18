@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Lock, Send, Copy, Plus, User, Search, MessageSquare } from "lucide-react";
+import { Lock, Send, Copy, Plus, User, Search, MessageSquare, X } from "lucide-react";
 import AlgorithmSelector from "@/components/AlgorithmSelector";
 import { Link } from "react-router-dom";
 
