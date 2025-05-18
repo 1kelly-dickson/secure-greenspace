@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -25,14 +26,14 @@ export default {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "#4CAF50",
+          DEFAULT: "#673AB7", // Violet/Purple
           foreground: "#FFFFFF",
-          light: "#F2FCE2",
-          dark: "#388E3C",
+          light: "#EDE7F6", // Soft lavender
+          dark: "#512DA8", // Deep purple
         },
         secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
+          DEFAULT: "#B0BEC5", // Silver/Grey
+          foreground: "#1A1A1A",
         },
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
@@ -73,11 +74,27 @@ export default {
           "0%": { opacity: "0", transform: "translateY(10px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
+        "pulse-glow": {
+          "0%, 100%": { 
+            opacity: "1",
+            boxShadow: "0 0 0 rgba(103, 58, 183, 0)"
+          },
+          "50%": { 
+            opacity: "0.8",
+            boxShadow: "0 0 20px rgba(103, 58, 183, 0.5)"
+          }
+        },
+        "spin-slow": {
+          "0%": { transform: "rotate(0deg)" },
+          "100%": { transform: "rotate(360deg)" }
+        }
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "fade-in": "fade-in 0.3s ease-out",
+        "pulse-glow": "pulse-glow 2s ease-in-out infinite",
+        "spin-slow": "spin-slow 10s linear infinite"
       },
     },
   },

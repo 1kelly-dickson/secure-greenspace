@@ -15,6 +15,7 @@ import Messaging from "./pages/Messaging";
 import FileEncryption from "./pages/FileEncryption";
 import HashGenerator from "./pages/HashGenerator";
 import Index from "./pages/Index";
+import Dashboard from "./pages/Dashboard";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +39,7 @@ const App = () => (
               <Route path="/decrypt" element={<Index />} />
               <Route path="/file-encrypt" element={<FileEncryption />} />
               <Route path="/hash" element={<HashGenerator />} />
+              <Route path="/dashboard" element={<Dashboard />} />
             </Routes>
           </main>
           <Footer />
