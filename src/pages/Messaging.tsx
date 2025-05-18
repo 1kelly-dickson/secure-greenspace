@@ -1,12 +1,12 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Lock, Send, Copy, Plus, User, Search } from "lucide-react";
+import { Lock, Send, Copy, Plus, User, Search, MessageSquare } from "lucide-react";
 import AlgorithmSelector from "@/components/AlgorithmSelector";
+import { Link } from "react-router-dom";
 
 interface Message {
   id: string;
