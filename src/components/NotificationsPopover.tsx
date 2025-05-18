@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Bell, UserPlus, Eye, AlertTriangle, Check, X } from "lucide-react";
 import { 
   Popover, 
@@ -10,10 +10,14 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { supabase } from "@/integrations/supabase/client";
+import { useState as useHookState } from '@hookstate/core';
+import { authState } from "@/state/auth";
+import { useToast } from "@/hooks/use-toast";
 
 interface Notification {
   id: string;
-  type: 'request' | 'view' | 'search' | 'warning';
+  type: 'contact_request' | 'contact_accepted' | 'message' | 'view' | 'search' | 'warning';
   title: string;
   description: string;
   timestamp: Date;
@@ -27,77 +31,193 @@ interface Notification {
 }
 
 const NotificationsPopover = () => {
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: "1",
-      type: "request",
-      title: "Connection Request",
-      description: "Alice wants to connect with you",
-      timestamp: new Date(),
-      read: false,
-      actionable: true,
-      user: {
-        id: "user-2",
-        name: "Alice",
-        avatar: "https://avatar.vercel.sh/u/74240040"
-      }
-    },
-    {
-      id: "2",
-      type: "view",
-      title: "Message Viewed",
-      description: "Bob viewed your encrypted message",
-      timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 mins ago
-      read: false,
-      actionable: false,
-      user: {
-        id: "user-3",
-        name: "Bob",
-        avatar: "https://avatar.vercel.sh/u/54717377"
-      }
-    },
-    {
-      id: "3",
-      type: "search",
-      title: "Search Alert",
-      description: "Charlie searched for your profile",
-      timestamp: new Date(Date.now() - 1000 * 60 * 60), // 1 hour ago
-      read: true,
-      actionable: false,
-      user: {
-        id: "user-4",
-        name: "Charlie",
-        avatar: "https://avatar.vercel.sh/u/68969568"
-      }
-    },
-    {
-      id: "4",
-      type: "warning",
-      title: "Security Alert",
-      description: "Unusual login attempt detected",
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-      read: true,
-      actionable: false,
-    }
-  ]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const auth = useHookState(authState);
+  const { toast } = useToast();
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, read: true })));
+  useEffect(() => {
+    if (!auth.user.get()) return;
+    
+    fetchNotifications();
+    
+    // Set up realtime subscription for new notifications
+    const channel = supabase
+      .channel('public:notifications')
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'notifications',
+        filter: `user_id=eq.${auth.user.get()?.id}` 
+      }, handleNewNotification)
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'notifications',
+        filter: `user_id=eq.${auth.user.get()?.id}` 
+      }, () => fetchNotifications())
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [auth.user.get()?.id]);
+
+  const handleNewNotification = (payload: any) => {
+    fetchNotifications(); // Refresh all notifications when a new one arrives
   };
 
-  const handleAction = (id: string, approved: boolean) => {
-    setNotifications(notifications.map(n => 
-      n.id === id 
-        ? { ...n, read: true, actionable: false, description: approved ? "Request accepted" : "Request denied" } 
-        : n
-    ));
+  const fetchNotifications = async () => {
+    if (!auth.user.get()?.id) return;
+    
+    setIsLoading(true);
+    
+    try {
+      // Get notifications with sender profile information
+      const { data: notificationsData, error } = await supabase
+        .from('notifications')
+        .select(`
+          id,
+          type,
+          content,
+          created_at,
+          is_read,
+          sender:sender_id (id, username, avatar_url)
+        `)
+        .eq('user_id', auth.user.get()?.id)
+        .order('created_at', { ascending: false })
+        .limit(20);
+      
+      if (error) throw error;
+      
+      if (notificationsData) {
+        const formattedNotifications: Notification[] = notificationsData.map(n => ({
+          id: n.id,
+          type: n.type as any,
+          title: getNotificationTitle(n.type),
+          description: n.content,
+          timestamp: new Date(n.created_at),
+          read: n.is_read,
+          actionable: n.type === 'contact_request',
+          user: n.sender ? {
+            id: n.sender.id,
+            name: n.sender.username,
+            avatar: n.sender.avatar_url
+          } : undefined
+        }));
+        
+        setNotifications(formattedNotifications);
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getNotificationTitle = (type: string): string => {
+    switch (type) {
+      case 'contact_request': return 'Connection Request';
+      case 'contact_accepted': return 'Request Accepted';
+      case 'message': return 'New Message';
+      case 'view': return 'Message Viewed';
+      case 'search': return 'Search Alert';
+      case 'warning': return 'Security Alert';
+      default: return 'Notification';
+    }
+  };
+
+  const markAllAsRead = async () => {
+    if (!auth.user.get()?.id) return;
+    
+    try {
+      // Update all unread notifications
+      const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('user_id', auth.user.get()?.id)
+        .eq('is_read', false);
+      
+      if (error) throw error;
+      
+      // Update local state
+      setNotifications(notifications.map(n => ({ ...n, read: true })));
+    } catch (error) {
+      console.error('Error marking notifications as read:', error);
+    }
+  };
+
+  const handleAction = async (id: string, approved: boolean) => {
+    // Find the notification
+    const notification = notifications.find(n => n.id === id);
+    if (!notification || !notification.user || !auth.user.get()?.id) return;
+    
+    try {
+      if (notification.type === 'contact_request') {
+        // Get the contact request
+        const { data: contacts, error: fetchError } = await supabase
+          .from('contacts')
+          .select('*')
+          .eq('user_id', notification.user.id)
+          .eq('contact_id', auth.user.get()?.id)
+          .eq('status', 'pending')
+          .maybeSingle();
+        
+        if (fetchError) throw fetchError;
+        
+        if (contacts) {
+          // Update the status
+          const { error: updateError } = await supabase
+            .from('contacts')
+            .update({ status: approved ? 'accepted' : 'rejected' })
+            .eq('id', contacts.id);
+          
+          if (updateError) throw updateError;
+          
+          // Mark notification as read
+          const { error: notifError } = await supabase
+            .from('notifications')
+            .update({ is_read: true })
+            .eq('id', id);
+          
+          if (notifError) throw notifError;
+          
+          // Update local state
+          setNotifications(notifications.map(n => 
+            n.id === id 
+              ? { 
+                  ...n, 
+                  read: true, 
+                  actionable: false, 
+                  description: approved ? "Request accepted" : "Request denied" 
+                } 
+              : n
+          ));
+          
+          toast({
+            title: approved ? "Request accepted" : "Request declined",
+            description: approved 
+              ? `You are now connected with ${notification.user.name}` 
+              : `You declined ${notification.user.name}'s request`,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error handling action:', error);
+      toast({
+        title: "Action failed",
+        description: "Failed to process the request",
+        variant: "destructive",
+      });
+    }
   };
 
   const getIcon = (type: Notification['type']) => {
     switch (type) {
-      case 'request': return <UserPlus className="w-4 h-4 text-primary" />;
+      case 'contact_request': return <UserPlus className="w-4 h-4 text-primary" />;
+      case 'contact_accepted': return <Check className="w-4 h-4 text-green-500" />;
       case 'view': return <Eye className="w-4 h-4 text-blue-500" />;
       case 'search': return <Bell className="w-4 h-4 text-amber-500" />;
       case 'warning': return <AlertTriangle className="w-4 h-4 text-red-500" />;
@@ -130,7 +250,11 @@ const NotificationsPopover = () => {
           )}
         </div>
         <ScrollArea className="h-[300px]">
-          {notifications.length > 0 ? (
+          {isLoading && notifications.length === 0 ? (
+            <div className="flex justify-center p-8">
+              <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          ) : notifications.length > 0 ? (
             <div className="divide-y">
               {notifications.map((notification) => (
                 <div 

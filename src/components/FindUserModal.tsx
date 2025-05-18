@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Dialog, 
   DialogContent, 
@@ -14,12 +14,16 @@ import { Input } from "@/components/ui/input";
 import { UserPlus, Search, User, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { supabase } from "@/integrations/supabase/client";
+import { useState as useHookState } from '@hookstate/core';
+import { authState } from "@/state/auth";
 
 interface FindUserModalProps {
   onSendRequest: (userId: string) => void;
+  buttonText?: string;
 }
 
-const FindUserModal = ({ onSendRequest }: FindUserModalProps) => {
+const FindUserModal = ({ onSendRequest, buttonText }: FindUserModalProps) => {
   const [userCode, setUserCode] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [foundUser, setFoundUser] = useState<{
@@ -29,12 +33,22 @@ const FindUserModal = ({ onSendRequest }: FindUserModalProps) => {
   } | null>(null);
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const auth = useHookState(authState);
 
-  const handleSearch = () => {
+  const handleSearch = async () => {
     if (!userCode) {
       toast({
         title: "Error",
-        description: "Please enter a user code",
+        description: "Please enter a username or user code",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!auth.user?.id) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to find users",
         variant: "destructive",
       });
       return;
@@ -42,45 +56,46 @@ const FindUserModal = ({ onSendRequest }: FindUserModalProps) => {
 
     setIsSearching(true);
     
-    // Simulate API call to search for user
-    setTimeout(() => {
-      if (userCode.toLowerCase().includes("alice")) {
+    try {
+      // Try to find user by user_code
+      const { data: userByCode, error: codeError } = await supabase
+        .from('profiles')
+        .select('id, username, avatar_url')
+        .or(`user_code.eq.${userCode},username.ilike.%${userCode}%`)
+        .neq('id', auth.user.id) // Don't find the current user
+        .limit(1);
+      
+      if (codeError) throw codeError;
+      
+      if (userByCode && userByCode.length > 0) {
         setFoundUser({
-          id: "user-2",
-          name: "Alice",
-          avatar: "https://avatar.vercel.sh/u/74240040"
-        });
-      } else if (userCode.toLowerCase().includes("bob")) {
-        setFoundUser({
-          id: "user-3",
-          name: "Bob",
-          avatar: "https://avatar.vercel.sh/u/54717377"
-        });
-      } else if (userCode.toLowerCase().includes("charlie")) {
-        setFoundUser({
-          id: "user-4",
-          name: "Charlie",
-          avatar: "https://avatar.vercel.sh/u/68969568"
+          id: userByCode[0].id,
+          name: userByCode[0].username,
+          avatar: userByCode[0].avatar_url
         });
       } else {
         setFoundUser(null);
         toast({
           title: "User not found",
-          description: "No user with that code exists",
+          description: "No user with that username or code exists",
           variant: "destructive",
         });
       }
+    } catch (error) {
+      console.error('Error searching for user:', error);
+      toast({
+        title: "Error searching",
+        description: "Failed to search for user",
+        variant: "destructive",
+      });
+    } finally {
       setIsSearching(false);
-    }, 1000);
+    }
   };
 
   const handleSendRequest = () => {
     if (foundUser) {
       onSendRequest(foundUser.id);
-      toast({
-        title: "Request sent",
-        description: `Connection request sent to ${foundUser.name}`,
-      });
       setOpen(false);
       setUserCode("");
       setFoundUser(null);
@@ -92,23 +107,24 @@ const FindUserModal = ({ onSendRequest }: FindUserModalProps) => {
       <DialogTrigger asChild>
         <Button>
           <UserPlus className="mr-2 h-4 w-4" />
-          Find User
+          {buttonText || "Find User"}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Find User</DialogTitle>
           <DialogDescription>
-            Enter a user code to connect with someone
+            Enter a username or user code to connect with someone
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="flex items-center gap-2">
             <Input
-              placeholder="Enter user code (e.g. SEC-ALICE-1234)"
+              placeholder="Enter username or code (e.g. alice123)"
               value={userCode}
               onChange={(e) => setUserCode(e.target.value)}
               className="flex-1"
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             />
             <Button
               variant="outline"

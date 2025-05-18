@@ -1,13 +1,15 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import FindUserModal from "@/components/FindUserModal";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Search, X } from "lucide-react";
+import { Search, X, UserPlus, MessageSquare, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Conversation from "@/components/Conversation";
+import { supabase } from "@/integrations/supabase/client";
+import { useState as useHookState } from '@hookstate/core';
+import { authState } from "@/state/auth";
 
 interface UserProfile {
   id: string;
@@ -21,37 +23,145 @@ interface MessagingDashboardProps {
 }
 
 const MessagingDashboard = ({ user }: MessagingDashboardProps) => {
-  const [contacts, setContacts] = useState<UserProfile[]>([
-    {
-      id: "user-2",
-      username: "Alice",
-      avatarUrl: "https://avatar.vercel.sh/u/74240040"
-    },
-    {
-      id: "user-3",
-      username: "Bob",
-      avatarUrl: "https://avatar.vercel.sh/u/54717377"
-    },
-    {
-      id: "user-4",
-      username: "Charlie",
-      avatarUrl: "https://avatar.vercel.sh/u/68969568"
-    }
-  ]);
+  const [contacts, setContacts] = useState<UserProfile[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedContact, setSelectedContact] = useState<UserProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const auth = useHookState(authState);
+
+  useEffect(() => {
+    fetchContacts();
+    
+    // Set up realtime subscription for new contacts
+    const channel = supabase
+      .channel('public:contacts')
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'contacts',
+        filter: `user_id=eq.${user.id}` 
+      }, () => fetchContacts())
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'contacts',
+        filter: `user_id=eq.${user.id}` 
+      }, () => fetchContacts())
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'contacts',
+        filter: `contact_id=eq.${user.id}` 
+      }, () => fetchContacts())
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'contacts',
+        filter: `contact_id=eq.${user.id}` 
+      }, () => fetchContacts())
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user.id]);
+
+  const fetchContacts = async () => {
+    if (!auth.user?.id) return;
+    
+    setIsLoading(true);
+    try {
+      // Get contacts where the current user is either the user_id or contact_id
+      // and the status is 'accepted'
+      const { data: contactsData, error: contactsError } = await supabase
+        .from('contacts')
+        .select(`
+          id,
+          user_id,
+          contact_id,
+          status,
+          user:user_id (id, username, avatar_url),
+          contact:contact_id (id, username, avatar_url)
+        `)
+        .or(`user_id.eq.${auth.user.id},contact_id.eq.${auth.user.id}`)
+        .eq('status', 'accepted');
+        
+      if (contactsError) throw contactsError;
+      
+      if (contactsData) {
+        // Format the contacts data
+        const formattedContacts = contactsData.map(c => {
+          // If current user is the user_id, then return contact data
+          // Otherwise return user data
+          const contactProfile = c.user_id === auth.user?.id ? c.contact : c.user;
+          
+          return {
+            id: contactProfile.id,
+            username: contactProfile.username,
+            avatarUrl: contactProfile.avatar_url
+          };
+        });
+        
+        setContacts(formattedContacts);
+      }
+    } catch (error) {
+      console.error('Error fetching contacts:', error);
+      toast({
+        title: "Failed to load contacts",
+        description: "Please try again later",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredContacts = searchQuery 
     ? contacts.filter(c => c.username.toLowerCase().includes(searchQuery.toLowerCase()))
     : contacts;
 
-  const handleSendRequest = (userId: string) => {
-    // In a real app, this would send a request to the server
-    toast({
-      title: "Request Sent",
-      description: "Your connection request has been sent",
-    });
+  const handleSendRequest = async (userId: string) => {
+    if (!auth.user?.id) {
+      toast({
+        title: "Authentication required",
+        description: "You need to be logged in to send requests",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      const { error } = await supabase
+        .from('contacts')
+        .insert({
+          user_id: auth.user.id,
+          contact_id: userId
+        });
+      
+      if (error) {
+        if (error.code === '23505') { // Unique violation
+          toast({
+            title: "Request already sent",
+            description: "You've already connected with this user",
+          });
+        } else {
+          throw error;
+        }
+      } else {
+        toast({
+          title: "Request Sent",
+          description: "Your connection request has been sent",
+        });
+      }
+    } catch (error) {
+      console.error('Error sending request:', error);
+      toast({
+        title: "Failed to send request",
+        description: "Please try again later",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSearch = () => {
@@ -72,15 +182,35 @@ const MessagingDashboard = ({ user }: MessagingDashboardProps) => {
     }
   };
 
-  const removeContact = (id: string) => {
-    setContacts(contacts.filter(c => c.id !== id));
-    if (selectedContact?.id === id) {
-      setSelectedContact(null);
+  const removeContact = async (id: string) => {
+    if (!auth.user?.id) return;
+    
+    try {
+      // Delete contact relationship where either user_id or contact_id matches
+      const { error } = await supabase
+        .from('contacts')
+        .delete()
+        .or(`and(user_id.eq.${auth.user.id},contact_id.eq.${id}),and(user_id.eq.${id},contact_id.eq.${auth.user.id})`);
+      
+      if (error) throw error;
+      
+      setContacts(contacts.filter(c => c.id !== id));
+      if (selectedContact?.id === id) {
+        setSelectedContact(null);
+      }
+      
+      toast({
+        title: "Contact Removed",
+        description: "Contact has been removed from your list",
+      });
+    } catch (error) {
+      console.error('Error removing contact:', error);
+      toast({
+        title: "Failed to remove contact",
+        description: "Please try again later",
+        variant: "destructive",
+      });
     }
-    toast({
-      title: "Contact Removed",
-      description: "Contact has been removed from your list",
-    });
   };
 
   return (
@@ -90,7 +220,18 @@ const MessagingDashboard = ({ user }: MessagingDashboardProps) => {
         <CardContent className="p-4 space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="font-medium">Contacts</h3>
-            <FindUserModal onSendRequest={handleSendRequest} />
+            <div className="flex gap-2">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={fetchContacts} 
+                disabled={isLoading}
+                title="Refresh contacts"
+              >
+                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              </Button>
+              <FindUserModal onSendRequest={handleSendRequest} />
+            </div>
           </div>
           
           <div className="flex items-center space-x-2">
@@ -99,6 +240,7 @@ const MessagingDashboard = ({ user }: MessagingDashboardProps) => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="flex-1"
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             />
             <Button variant="ghost" size="icon" onClick={handleSearch}>
               <Search className="h-4 w-4" />
@@ -106,9 +248,15 @@ const MessagingDashboard = ({ user }: MessagingDashboardProps) => {
           </div>
           
           <div className="space-y-2 mt-4">
-            {filteredContacts.length === 0 ? (
+            {isLoading && contacts.length === 0 ? (
+              <div className="flex justify-center p-4">
+                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            ) : filteredContacts.length === 0 ? (
               <div className="text-center p-4">
-                <p className="text-sm text-muted-foreground">No contacts found</p>
+                <UserPlus className="mx-auto h-8 w-8 text-muted-foreground opacity-50 mb-2" />
+                <p className="text-sm text-muted-foreground mb-4">No contacts found</p>
+                <FindUserModal onSendRequest={handleSendRequest} buttonText="Find Users" />
               </div>
             ) : (
               filteredContacts.map((contact) => (
@@ -150,6 +298,7 @@ const MessagingDashboard = ({ user }: MessagingDashboardProps) => {
         ) : (
           <Card className="h-full flex items-center justify-center">
             <CardContent className="py-12 text-center">
+              <MessageSquare className="mx-auto h-12 w-12 text-muted-foreground opacity-50 mb-2" />
               <h3 className="text-lg font-medium mb-2">Select a contact</h3>
               <p className="text-muted-foreground">
                 Choose a contact from the list or find new users

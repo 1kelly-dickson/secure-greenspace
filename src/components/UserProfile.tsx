@@ -6,17 +6,30 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Shield, Clock, UserCog, Eye } from "lucide-react";
+import { Shield, Clock, UserCog, Eye, Copy } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface UserProfileProps {
   username: string;
   avatarUrl: string;
   isPremium: boolean;
+  userCode?: string;
 }
 
-const UserProfile = ({ username, avatarUrl, isPremium }: UserProfileProps) => {
+const UserProfile = ({ username, avatarUrl, isPremium, userCode }: UserProfileProps) => {
   const [deleteAfterViewing, setDeleteAfterViewing] = useState("never");
   const [encryptionNotifications, setEncryptionNotifications] = useState(true);
+  const { toast } = useToast();
+
+  const copyCode = () => {
+    if (userCode) {
+      navigator.clipboard.writeText(userCode);
+      toast({
+        title: "Code Copied",
+        description: "Your unique code has been copied to clipboard",
+      });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -90,9 +103,10 @@ const UserProfile = ({ username, avatarUrl, isPremium }: UserProfileProps) => {
         </CardHeader>
         <CardContent>
           <div className="bg-muted p-3 rounded-md font-mono text-center text-lg">
-            SEC-{username.toUpperCase()}-{Math.floor(Math.random() * 10000).toString().padStart(4, '0')}
+            {userCode || `SEC-${username.toUpperCase()}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`}
           </div>
-          <Button className="w-full mt-2" variant="outline">
+          <Button className="w-full mt-2" variant="outline" onClick={copyCode}>
+            <Copy className="w-4 h-4 mr-2" />
             Copy Code
           </Button>
         </CardContent>
