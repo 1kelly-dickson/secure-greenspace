@@ -1,20 +1,29 @@
 
 import { useEffect } from 'react';
-import { useState as useHookState } from '@hookstate/core';
 import { authState, initAuth } from '@/state/auth';
+import { useHookstate } from '@hookstate/core';
 
-export function useAuth() {
-  const auth = useHookState(authState);
+export const useAuth = () => {
+  const auth = useHookstate(authState);
   
   useEffect(() => {
-    const cleanup = initAuth();
-    return cleanup;
+    const initializeAuth = async () => {
+      const cleanup = await initAuth();
+      return cleanup;
+    };
+    
+    const cleanupPromise = initializeAuth();
+    
+    return () => {
+      cleanupPromise.then(cleanup => cleanup());
+    };
   }, []);
-  
+
   return {
     user: auth.user.get(),
     session: auth.session.get(),
     loading: auth.loading.get(),
-    isAuthenticated: !!auth.user.get(),
   };
-}
+};
+
+export default useAuth;

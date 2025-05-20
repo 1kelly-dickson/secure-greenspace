@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Lock, Mail, User, Shield, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { signIn, signUp } from "@/state/auth";
-import { useState as useHookState } from '@hookstate/core';
+import { useHookstate } from '@hookstate/core';
 import { authState } from "@/state/auth";
 
 const Auth = () => {

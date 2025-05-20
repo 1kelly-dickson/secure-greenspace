@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, ChangeEvent } from "react";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -11,7 +10,7 @@ import AlgorithmSelector from "@/components/AlgorithmSelector";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
-import { useState as useHookState } from '@hookstate/core';
+import { useHookstate } from '@hookstate/core';
 import { authState } from "@/state/auth";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
@@ -50,7 +49,7 @@ const Conversation = ({ currentUser, contact }: ConversationProps) => {
     file: null,
     preview: null
   });
-  const auth = useHookState(authState);
+  const auth = useHookstate(authState);
 
   useEffect(() => {
     // Fetch messages when conversation opens

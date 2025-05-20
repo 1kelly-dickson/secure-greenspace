@@ -7,7 +7,7 @@ import PageTour from "@/components/PageTour";
 import NotificationsPopover from "@/components/NotificationsPopover";
 import { User, MessageSquare, Settings } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useState as useHookState } from '@hookstate/core';
+import { useHookstate } from '@hookstate/core';
 import { authState, signOut } from "@/state/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";

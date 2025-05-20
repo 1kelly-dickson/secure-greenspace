@@ -1,5 +1,5 @@
 
-import { createState } from '@hookstate/core';
+import { hookstate } from '@hookstate/core';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User } from '@supabase/supabase-js';
 
@@ -15,7 +15,7 @@ const initialState: AuthState = {
   loading: true,
 };
 
-export const authState = createState<AuthState>(initialState);
+export const authState = hookstate<AuthState>(initialState);
 
 export const initAuth = async () => {
   try {

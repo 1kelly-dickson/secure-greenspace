@@ -19,19 +19,24 @@ import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
 import { initAuth, authState } from "./state/auth";
-import { useState as useHookState } from '@hookstate/core';
+import { useHookstate } from '@hookstate/core';
 
 const App = () => {
   // Initialize QueryClient inside the component
   const [queryClient] = useState(() => new QueryClient());
   const [authInitialized, setAuthInitialized] = useState(false);
-  const auth = useHookState(authState);
+  const auth = useHookstate(authState);
 
   useEffect(() => {
     // Initialize authentication
-    const cleanup = initAuth();
+    const cleanupPromise = initAuth();
+    cleanupPromise.then(cleanup => {
+      // Store the cleanup function for when the component unmounts
+      return () => cleanup();
+    });
     setAuthInitialized(true);
-    return cleanup;
+    
+    // No return needed here as we're handling cleanup in the promise
   }, []);
 
   // Protected route component
