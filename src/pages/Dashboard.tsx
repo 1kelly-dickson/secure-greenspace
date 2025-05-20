@@ -1,146 +1,130 @@
-
-import { useState, useEffect } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import UserProfile from "@/components/UserProfile";
-import MessagingDashboard from "@/components/MessagingDashboard";
-import PageTour from "@/components/PageTour";
-import NotificationsPopover from "@/components/NotificationsPopover";
-import { User, MessageSquare, Settings } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import React, { useEffect, useState } from 'react';
 import { useHookstate } from '@hookstate/core';
 import { authState, signOut } from "@/state/auth";
-import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
+import { UserProfile } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
+import FindUserModal from '@/components/FindUserModal';
+import ContactsList from '@/components/ContactsList';
+import NotificationsPopover from '@/components/NotificationsPopover';
 
 const Dashboard = () => {
-  const [activeTab, setActiveTab] = useState("messages");
-  const auth = useHookState(authState);
-  const [profile, setProfile] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
+  const auth = useHookstate(authState);
   const navigate = useNavigate();
-  
-  useEffect(() => {
-    if (auth.user.get()?.id) {
-      fetchProfile();
-    }
-  }, [auth.user.get()?.id]);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isFindUserModalOpen, setIsFindUserModalOpen] = useState(false);
+  const [contacts, setContacts] = useState<UserProfile[]>([]);
 
-  const fetchProfile = async () => {
-    if (!auth.user.get()?.id) return;
-    
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', auth.user.get()?.id)
-        .single();
-      
-      if (error) throw error;
-      
-      setProfile(data);
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (auth.user.get()) {
+        try {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', auth.user.get()?.id)
+            .single();
+
+          if (error) {
+            console.error("Error fetching profile:", error);
+          }
+
+          if (data) {
+            setUserProfile({
+              id: data.id,
+              email: data.email,
+              fullName: data.full_name,
+              username: data.username,
+              avatarUrl: data.avatar_url,
+            });
+          }
+        } catch (error) {
+          console.error("Unexpected error fetching profile:", error);
+        }
+      }
+    };
+
+    fetchUserProfile();
+  }, [auth.user]);
+
+  useEffect(() => {
+    const fetchContacts = async () => {
+      if (auth.user.get()) {
+        try {
+          const { data, error } = await supabase
+            .from('contacts')
+            .select('profiles(*)')
+            .eq('user_id', auth.user.get()?.id);
+
+          if (error) {
+            console.error("Error fetching contacts:", error);
+            return;
+          }
+
+          if (data) {
+            const contactsData = data.map(contact => ({
+              id: contact.profiles.id,
+              email: contact.profiles.email,
+              fullName: contact.profiles.full_name,
+              username: contact.profiles.username,
+              avatarUrl: contact.profiles.avatar_url,
+            }));
+            setContacts(contactsData);
+          }
+        } catch (error) {
+          console.error("Unexpected error fetching contacts:", error);
+        }
+      }
+    };
+
+    fetchContacts();
+  }, [auth.user]);
 
   const handleSignOut = async () => {
-    const { success } = await signOut();
-    
-    if (success) {
-      toast({
-        title: "Signed out",
-        description: "You've been successfully signed out",
-      });
-      navigate("/");
+    const result = await signOut();
+    if (result.success) {
+      navigate('/auth');
+    } else {
+      console.error("Sign out failed:", result.error);
     }
   };
-  
-  // Create a user object from profile data
-  const userProfile = profile ? {
-    id: profile.id,
-    username: profile.username,
-    avatarUrl: profile.avatar_url,
-    isPremium: profile.is_premium
-  } : {
-    id: auth.user.get()?.id || "user-1",
-    username: auth.user.get()?.email?.split('@')[0] || "User",
-    avatarUrl: "https://avatar.vercel.sh/u/42960598",
-    isPremium: false
+
+  const handleAddContact = (newContact: UserProfile) => {
+    setContacts(prevContacts => [...prevContacts, newContact]);
   };
 
   return (
-    <div className="container mx-auto py-6 px-4">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <div className="flex items-center gap-4">
-          <NotificationsPopover />
-          <div className="flex items-center gap-2">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={userProfile.avatarUrl} alt={userProfile.username} />
-              <AvatarFallback>{userProfile.username.charAt(0)}</AvatarFallback>
-            </Avatar>
-            <span className="text-sm font-medium hidden md:inline">{userProfile.username}</span>
-          </div>
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Dashboard</h1>
+
+      {userProfile && (
+        <div className="mb-4">
+          <img
+            src={userProfile.avatarUrl || `https://avatar.vercel.sh/${userProfile.fullName}`}
+            alt={userProfile.fullName}
+            className="w-20 h-20 rounded-full mb-2"
+          />
+          <p><strong>Full Name:</strong> {userProfile.fullName}</p>
+          <p><strong>Username:</strong> {userProfile.username}</p>
+          <p><strong>Email:</strong> {userProfile.email}</p>
         </div>
+      )}
+
+      <div className="flex items-center justify-between mb-4">
+        <Button onClick={() => setIsFindUserModalOpen(true)}>Add Contact</Button>
+        <NotificationsPopover />
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid grid-cols-3 w-full max-w-md mx-auto">
-          <TabsTrigger value="messages" className="flex items-center gap-2">
-            <MessageSquare className="h-4 w-4" />
-            <span>Messages</span>
-          </TabsTrigger>
-          <TabsTrigger value="profile" className="flex items-center gap-2">
-            <User className="h-4 w-4" />
-            <span>Profile</span>
-          </TabsTrigger>
-          <TabsTrigger value="settings" className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
-            <span>Settings</span>
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="messages" className="space-y-4">
-          <MessagingDashboard user={userProfile} />
-          <PageTour pageName="messaging" />
-        </TabsContent>
-        
-        <TabsContent value="profile">
-          <UserProfile 
-            username={userProfile.username}
-            avatarUrl={userProfile.avatarUrl}
-            isPremium={userProfile.isPremium}
-            userCode={profile?.user_code}
-          />
-          <PageTour pageName="profile" />
-        </TabsContent>
-        
-        <TabsContent value="settings">
-          <div className="max-w-md mx-auto p-6 bg-white rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4">Settings</h2>
-            <p className="text-gray-500 mb-6">Account and security settings.</p>
-            
-            <div className="space-y-4">
-              <div className="border-t pt-4">
-                <h3 className="text-lg font-medium mb-2">Authentication</h3>
-                <Button 
-                  variant="destructive" 
-                  className="w-full" 
-                  onClick={handleSignOut}
-                >
-                  Sign Out
-                </Button>
-              </div>
-            </div>
-          </div>
-        </TabsContent>
-      </Tabs>
+      <ContactsList contacts={contacts} />
+
+      <Button variant="destructive" onClick={handleSignOut}>Sign Out</Button>
+
+      <FindUserModal
+        open={isFindUserModalOpen}
+        onOpenChange={setIsFindUserModalOpen}
+        onContactSelected={handleAddContact}
+      />
     </div>
   );
 };

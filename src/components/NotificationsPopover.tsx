@@ -1,28 +1,22 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Button } from "@/components/ui/button"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { CheckCheck, Bell } from "lucide-react"
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
-import {
-  Bell,
-  CheckCircle,
-  Info,
-  AlertTriangle,
-  X,
-  Loader2,
-} from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { useHookstate } from '@hookstate/core';
-import { authState } from "@/state/auth";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { useUser } from '@/hooks/useUser';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Notification {
   id: string;
-  type: "success" | "info" | "warning" | "error";
+  type: string;
   message: string;
   timestamp: Date;
   read: boolean;
@@ -31,10 +25,39 @@ interface Notification {
 const NotificationsPopover = () => {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const auth = useHookstate(authState);
+  const { user } = useUser();
 
   useEffect(() => {
+    const fetchNotifications = async () => {
+      if (user && user.id) {
+        try {
+          const { data, error } = await supabase
+            .from('notifications')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
+
+          if (error) {
+            console.error('Error fetching notifications:', error);
+            return;
+          }
+
+          if (data) {
+            const updatedNotifications = data.map(notification => ({
+              id: notification.id,
+              type: notification.type,
+              message: notification.content,
+              timestamp: new Date(notification.created_at),
+              read: notification.is_read
+            }));
+            setNotifications(updatedNotifications as Notification[]);
+          }
+        } catch (error) {
+          console.error('Error fetching notifications:', error);
+        }
+      }
+    };
+
     fetchNotifications();
 
     // Set up a real-time subscription to listen for new notifications
@@ -42,198 +65,130 @@ const NotificationsPopover = () => {
       .channel('public:notifications')
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${auth.user.get()?.id}` },
+        { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user?.id}` },
         (payload) => {
-          const newNotification = payload.new;
-          const formattedNotification: Notification = {
-            id: newNotification.id,
-            type: newNotification.type,
-            message: newNotification.message,
-            timestamp: new Date(newNotification.created_at),
-            read: newNotification.read,
-          };
-          setNotifications((prevNotifications) => [formattedNotification, ...prevNotifications]);
+          if (payload.new) {
+            const newNotification = {
+              id: payload.new.id,
+              type: payload.new.type,
+              message: payload.new.content,
+              timestamp: new Date(payload.new.created_at),
+              read: payload.new.is_read
+            };
+            setNotifications((prevNotifications) => [newNotification, ...prevNotifications]);
+          }
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      channel.unsubscribe();
     };
-  }, [auth.user.get()?.id]);
+  }, [user]);
 
-  const fetchNotifications = async () => {
-    setIsLoading(true);
+  const markAsRead = async (notification: Notification) => {
     try {
-      const { data, error } = await supabase
-        .from("notifications")
-        .select("*")
-        .eq("user_id", auth.user.get()?.id)
-        .order("created_at", { ascending: false });
+      await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('id', notification.id);
 
-      if (error) {
-        throw error;
-      }
-
-      if (data) {
-        const formattedNotifications = data.map((notification) => ({
-          id: notification.id,
-          type: notification.type,
-          message: notification.message,
-          timestamp: new Date(notification.created_at),
-          read: notification.read,
-        }));
-        setNotifications(formattedNotifications);
-      }
-    } catch (error) {
-      console.error("Error fetching notifications:", error);
-      toast({
-        title: "Failed to load notifications",
-        description: "Please try again later.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const markAsRead = async (notificationId: string) => {
-    try {
-      const { error } = await supabase
-        .from("notifications")
-        .update({ read: true })
-        .eq("id", notificationId);
-
-      if (error) {
-        throw error;
-      }
-
-      setNotifications((prevNotifications) =>
-        prevNotifications.map((notification) =>
-          notification.id === notificationId ? { ...notification, read: true } : notification
+      setNotifications(prevNotifications =>
+        prevNotifications.map(n =>
+          n.id === notification.id ? { ...n, read: true } : n
         )
       );
     } catch (error) {
-      console.error("Error marking notification as read:", error);
-      toast({
-        title: "Failed to mark as read",
-        description: "Please try again.",
-        variant: "destructive",
-      });
+      console.error('Error marking notification as read:', error);
     }
   };
 
-  const clearAllNotifications = async () => {
+  const markAllAsRead = async () => {
     try {
-      const { error } = await supabase
-        .from("notifications")
-        .delete()
-        .eq("user_id", auth.user.get()?.id);
+      await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('user_id', user?.id);
 
-      if (error) {
-        throw error;
-      }
-
-      setNotifications([]);
-      toast({
-        title: "Notifications cleared",
-        description: "All notifications have been cleared.",
-      });
+      setNotifications(prevNotifications =>
+        prevNotifications.map(n => ({ ...n, read: true }))
+      );
     } catch (error) {
-      console.error("Error clearing notifications:", error);
-      toast({
-        title: "Failed to clear notifications",
-        description: "Please try again.",
-        variant: "destructive",
-      });
+      console.error('Error marking all notifications as read:', error);
     }
   };
 
-  const unreadCount = notifications.filter((notification) => !notification.read).length;
-
-  let notificationIcon;
-  if (unreadCount > 0) {
-    notificationIcon = (
-      <Bell className="h-4 w-4" />
-    );
-  } else {
-    notificationIcon = (
-      <Bell className="h-4 w-4" />
-    );
-  }
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" className="relative">
-          {notificationIcon}
+        <Button variant="ghost" role="button" className="relative">
+          <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
-            <Badge
-              variant="secondary"
-              className="absolute -top-1 -right-1 rounded-full px-2 py-0.5 text-xs"
-            >
+            <div className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center">
               {unreadCount}
-            </Badge>
+            </div>
           )}
+          <span className="sr-only">View notifications</span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0 overflow-hidden" align="end">
-        <div className="p-4 border-b">
-          <h3 className="text-sm font-medium">Notifications</h3>
+      <PopoverContent className="w-80 p-0">
+        <div className="flex items-center justify-between border-b p-4">
+          <p className="text-sm font-medium">Notifications</p>
+          {notifications.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 rounded-full">
+                  <CheckCheck className="mr-2 h-4 w-4" />
+                  Mark All as Read
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" forceMount>
+                <DropdownMenuItem onClick={markAllAsRead}>
+                  Confirm
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
-        <ScrollArea className="h-[300px]">
-          <div className="divide-y divide-border">
-            {isLoading ? (
-              <div className="flex items-center justify-center h-24">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : notifications.length === 0 ? (
-              <div className="p-4 text-center text-sm text-muted-foreground">
-                No notifications
-              </div>
-            ) : (
-              notifications.map((notification) => (
+        {notifications.length === 0 ? (
+          <div className="p-4 text-center text-sm text-muted-foreground">
+            No notifications
+          </div>
+        ) : (
+          <ScrollArea className="max-h-[300px]">
+            <div className="flex flex-col space-y-1 p-4">
+              {notifications.map((notification) => (
                 <div
                   key={notification.id}
-                  className="flex items-start gap-2 p-4 hover:bg-secondary cursor-pointer"
-                  onClick={() => markAsRead(notification.id)}
+                  className="flex items-center space-x-2"
                 >
-                  {notification.type === "success" && (
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                  )}
-                  {notification.type === "info" && (
-                    <Info className="h-4 w-4 text-blue-500" />
-                  )}
-                  {notification.type === "warning" && (
-                    <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                  )}
-                  {notification.type === "error" && (
-                    <AlertTriangle className="h-4 w-4 text-red-500" />
-                  )}
-                  <div>
-                    <p className="text-sm">{notification.message}</p>
-                    <div className="flex items-center justify-between">
-                      <time
-                        dateTime={notification.timestamp.toISOString()}
-                        className="text-xs text-muted-foreground"
-                      >
-                        {notification.timestamp.toLocaleDateString()}
-                      </time>
-                      {!notification.read && (
-                        <Badge variant="outline">Unread</Badge>
-                      )}
-                    </div>
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={`https://avatar.vercel.sh/u/${notification.type}.jpeg`} />
+                    <AvatarFallback>{notification.type.slice(0, 2).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col space-y-0.5">
+                    <p className="text-sm font-medium">{notification.message}</p>
+                    <time className="text-xs text-muted-foreground">
+                      {notification.timestamp.toLocaleDateString()}
+                    </time>
                   </div>
+                  {!notification.read && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="ml-auto h-8"
+                      onClick={() => markAsRead(notification)}
+                    >
+                      Mark as Read
+                    </Button>
+                  )}
                 </div>
-              ))
-            )}
-          </div>
-        </ScrollArea>
-        <div className="p-4 border-t">
-          <Button variant="secondary" className="w-full" onClick={clearAllNotifications}>
-            Clear All
-          </Button>
-        </div>
+              ))}
+            </div>
+          </ScrollArea>
+        )}
       </PopoverContent>
     </Popover>
   );
