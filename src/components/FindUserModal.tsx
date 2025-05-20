@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import {
   Dialog,
@@ -5,16 +6,13 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Button } from "@/components/ui/button"
-import { UserProfile } from "@/types"
-import { Search } from "lucide-react";
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { UserProfile } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 import { findUsers } from "@/integrations/supabase/profiles";
-import { useHookstate } from '@hookstate/core';
 
 interface FindUserModalProps {
   open: boolean;
@@ -69,7 +67,7 @@ const FindUserModal: React.FC<FindUserModalProps> = ({ open, onOpenChange, onCon
                     className="w-full text-left hover:bg-secondary focus:outline-none focus:bg-secondary p-2 rounded"
                     onClick={() => handleSelectUser(user)}
                   >
-                    {user.username} ({user.email})
+                    {user.username} {user.email && `(${user.email})`}
                   </button>
                 </li>
               ))}

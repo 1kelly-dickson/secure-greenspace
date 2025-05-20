@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useHookstate } from '@hookstate/core';
 import { authState, signOut } from "@/state/auth";
@@ -33,9 +34,9 @@ const Dashboard = () => {
           if (data) {
             setUserProfile({
               id: data.id,
-              email: data.email,
-              fullName: data.full_name,
-              username: data.username,
+              email: data.email || '',
+              fullName: data.full_name || '',
+              username: data.username || '',
               avatarUrl: data.avatar_url,
             });
           }
@@ -52,9 +53,17 @@ const Dashboard = () => {
     const fetchContacts = async () => {
       if (auth.user.get()) {
         try {
+          // Fix the query to specify the fields we need from profiles
           const { data, error } = await supabase
             .from('contacts')
-            .select('profiles(*)')
+            .select(`
+              contact_id,
+              profiles:contact_id (
+                id, 
+                username, 
+                avatar_url
+              )
+            `)
             .eq('user_id', auth.user.get()?.id);
 
           if (error) {
@@ -63,11 +72,12 @@ const Dashboard = () => {
           }
 
           if (data) {
+            // Transform the data to match the UserProfile type
             const contactsData = data.map(contact => ({
               id: contact.profiles.id,
-              email: contact.profiles.email,
-              fullName: contact.profiles.full_name,
-              username: contact.profiles.username,
+              email: '', // May need to fetch this separately
+              fullName: '', // May need to fetch this separately
+              username: contact.profiles.username || '',
               avatarUrl: contact.profiles.avatar_url,
             }));
             setContacts(contactsData);
@@ -101,13 +111,13 @@ const Dashboard = () => {
       {userProfile && (
         <div className="mb-4">
           <img
-            src={userProfile.avatarUrl || `https://avatar.vercel.sh/${userProfile.fullName}`}
-            alt={userProfile.fullName}
+            src={userProfile.avatarUrl || `https://avatar.vercel.sh/${userProfile.username}`}
+            alt={userProfile.fullName || userProfile.username}
             className="w-20 h-20 rounded-full mb-2"
           />
-          <p><strong>Full Name:</strong> {userProfile.fullName}</p>
           <p><strong>Username:</strong> {userProfile.username}</p>
-          <p><strong>Email:</strong> {userProfile.email}</p>
+          {userProfile.fullName && <p><strong>Full Name:</strong> {userProfile.fullName}</p>}
+          {userProfile.email && <p><strong>Email:</strong> {userProfile.email}</p>}
         </div>
       )}
 
