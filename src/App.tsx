@@ -22,21 +22,27 @@ import { initAuth, authState } from "./state/auth";
 import { useHookstate } from '@hookstate/core';
 
 const App = () => {
-  // Initialize QueryClient inside the component
-  const [queryClient] = useState(() => new QueryClient());
+  const queryClient = new QueryClient();
   const [authInitialized, setAuthInitialized] = useState(false);
   const auth = useHookstate(authState);
 
   useEffect(() => {
     // Initialize authentication
-    const cleanupPromise = initAuth();
-    cleanupPromise.then(cleanup => {
-      // Store the cleanup function for when the component unmounts
-      return () => cleanup();
-    });
-    setAuthInitialized(true);
+    const init = async () => {
+      const cleanup = await initAuth();
+      setAuthInitialized(true);
+      return cleanup;
+    };
     
-    // No return needed here as we're handling cleanup in the promise
+    const cleanupPromise = init();
+    
+    return () => {
+      cleanupPromise.then(cleanup => {
+        if (typeof cleanup === 'function') {
+          cleanup();
+        }
+      });
+    };
   }, []);
 
   // Protected route component

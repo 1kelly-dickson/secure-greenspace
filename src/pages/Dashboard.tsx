@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { UserProfile } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import FindUserModal from '@/components/FindUserModal';
-import ContactsList from '@/components/ContactsList';
 import NotificationsPopover from '@/components/NotificationsPopover';
 
 const Dashboard = () => {
@@ -34,8 +33,8 @@ const Dashboard = () => {
           if (data) {
             setUserProfile({
               id: data.id,
-              email: data.email || '',
-              fullName: data.full_name || '',
+              email: '', // This field may not exist in the profiles table
+              fullName: data.username || '', // Use username as fallback
               username: data.username || '',
               avatarUrl: data.avatar_url,
             });
@@ -74,11 +73,11 @@ const Dashboard = () => {
           if (data) {
             // Transform the data to match the UserProfile type
             const contactsData = data.map(contact => ({
-              id: contact.profiles.id,
-              email: '', // May need to fetch this separately
-              fullName: '', // May need to fetch this separately
-              username: contact.profiles.username || '',
-              avatarUrl: contact.profiles.avatar_url,
+              id: contact.profiles?.id || contact.contact_id,
+              email: '', // This might not be available
+              fullName: '', // This might not be available
+              username: contact.profiles?.username || '',
+              avatarUrl: contact.profiles?.avatar_url,
             }));
             setContacts(contactsData);
           }
@@ -126,9 +125,32 @@ const Dashboard = () => {
         <NotificationsPopover />
       </div>
 
-      <ContactsList contacts={contacts} />
+      <div className="bg-card rounded-md p-4 border shadow-sm">
+        <h2 className="text-xl font-semibold mb-3">Contacts</h2>
+        {contacts.length > 0 ? (
+          <ul className="space-y-2">
+            {contacts.map(contact => (
+              <li key={contact.id} className="border-b pb-2">
+                <div className="flex items-center gap-2">
+                  <img 
+                    src={contact.avatarUrl || `https://avatar.vercel.sh/${contact.username}`}
+                    alt={contact.username}
+                    className="w-10 h-10 rounded-full"
+                  />
+                  <div>
+                    <p className="font-medium">{contact.username}</p>
+                    {contact.fullName && <p className="text-sm text-muted-foreground">{contact.fullName}</p>}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-muted-foreground">No contacts yet. Add some using the button above.</p>
+        )}
+      </div>
 
-      <Button variant="destructive" onClick={handleSignOut}>Sign Out</Button>
+      <Button variant="destructive" onClick={handleSignOut} className="mt-4">Sign Out</Button>
 
       <FindUserModal
         open={isFindUserModalOpen}

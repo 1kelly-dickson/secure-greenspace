@@ -32,8 +32,8 @@ export default function useUser() {
         if (data) {
           setProfile({
             id: data.id,
-            email: data.email || '',
-            fullName: data.full_name || '',
+            email: '', // This field might not exist in the profiles table
+            fullName: data.username || '', // Use username as fallback for fullName
             username: data.username || '',
             avatarUrl: data.avatar_url
           });

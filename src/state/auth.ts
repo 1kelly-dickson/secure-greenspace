@@ -35,6 +35,21 @@ export const initAuth = async () => {
         loading: false,
       });
     }
+
+    // Subscribe to auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        authState.set({
+          user: session?.user ?? null,
+          session,
+          loading: false,
+        });
+      }
+    );
+    
+    return () => {
+      subscription.unsubscribe();
+    };
   } catch (error) {
     console.error('Error initializing auth:', error);
     authState.set({
@@ -42,22 +57,8 @@ export const initAuth = async () => {
       session: null,
       loading: false,
     });
+    return () => {};
   }
-  
-  // Subscribe to auth changes
-  const { data: { subscription } } = supabase.auth.onAuthStateChange(
-    (event, session) => {
-      authState.set({
-        user: session?.user ?? null,
-        session,
-        loading: false,
-      });
-    }
-  );
-  
-  return () => {
-    subscription.unsubscribe();
-  };
 };
 
 export const signUp = async (email: string, password: string) => {
