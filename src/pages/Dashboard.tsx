@@ -36,7 +36,7 @@ const Dashboard = () => {
             setUserProfile({
               id: data.id,
               email: auth.user.get()?.email || '', 
-              fullName: data.full_name || '', 
+              fullName: data.username || '', // Use username as fullName since full_name doesn't exist yet
               username: data.username || '',
               avatarUrl: data.avatar_url,
             });
@@ -61,8 +61,7 @@ const Dashboard = () => {
               profiles:contact_id (
                 id, 
                 username, 
-                avatar_url,
-                full_name
+                avatar_url
               )
             `)
             .eq('user_id', auth.user.get()?.id);
@@ -76,7 +75,7 @@ const Dashboard = () => {
             const contactsData = data.map(contact => ({
               id: contact.profiles?.id || contact.contact_id,
               email: '', 
-              fullName: contact.profiles?.full_name || '', 
+              fullName: contact.profiles?.username || '', 
               username: contact.profiles?.username || '',
               avatarUrl: contact.profiles?.avatar_url,
             }));
