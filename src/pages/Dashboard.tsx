@@ -8,6 +8,7 @@ import { UserProfile } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import FindUserModal from '@/components/FindUserModal';
 import NotificationsPopover from '@/components/NotificationsPopover';
+import ContactsList from '@/components/ContactsList';
 
 const Dashboard = () => {
   const auth = useHookstate(authState);
@@ -28,13 +29,14 @@ const Dashboard = () => {
 
           if (error) {
             console.error("Error fetching profile:", error);
+            return;
           }
 
           if (data) {
             setUserProfile({
               id: data.id,
-              email: '', // This field may not exist in the profiles table
-              fullName: data.username || '', // Use username as fallback
+              email: auth.user.get()?.email || '', 
+              fullName: data.full_name || '', 
               username: data.username || '',
               avatarUrl: data.avatar_url,
             });
@@ -52,7 +54,6 @@ const Dashboard = () => {
     const fetchContacts = async () => {
       if (auth.user.get()) {
         try {
-          // Fix the query to specify the fields we need from profiles
           const { data, error } = await supabase
             .from('contacts')
             .select(`
@@ -60,7 +61,8 @@ const Dashboard = () => {
               profiles:contact_id (
                 id, 
                 username, 
-                avatar_url
+                avatar_url,
+                full_name
               )
             `)
             .eq('user_id', auth.user.get()?.id);
@@ -71,11 +73,10 @@ const Dashboard = () => {
           }
 
           if (data) {
-            // Transform the data to match the UserProfile type
             const contactsData = data.map(contact => ({
               id: contact.profiles?.id || contact.contact_id,
-              email: '', // This might not be available
-              fullName: '', // This might not be available
+              email: '', 
+              fullName: contact.profiles?.full_name || '', 
               username: contact.profiles?.username || '',
               avatarUrl: contact.profiles?.avatar_url,
             }));
@@ -125,30 +126,7 @@ const Dashboard = () => {
         <NotificationsPopover />
       </div>
 
-      <div className="bg-card rounded-md p-4 border shadow-sm">
-        <h2 className="text-xl font-semibold mb-3">Contacts</h2>
-        {contacts.length > 0 ? (
-          <ul className="space-y-2">
-            {contacts.map(contact => (
-              <li key={contact.id} className="border-b pb-2">
-                <div className="flex items-center gap-2">
-                  <img 
-                    src={contact.avatarUrl || `https://avatar.vercel.sh/${contact.username}`}
-                    alt={contact.username}
-                    className="w-10 h-10 rounded-full"
-                  />
-                  <div>
-                    <p className="font-medium">{contact.username}</p>
-                    {contact.fullName && <p className="text-sm text-muted-foreground">{contact.fullName}</p>}
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-muted-foreground">No contacts yet. Add some using the button above.</p>
-        )}
-      </div>
+      <ContactsList contacts={contacts} />
 
       <Button variant="destructive" onClick={handleSignOut} className="mt-4">Sign Out</Button>
 

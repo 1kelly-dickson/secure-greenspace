@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,9 +13,12 @@ import {
 import { User, LogIn, UserPlus, Lock } from "lucide-react";
 import NotificationsPopover from "@/components/NotificationsPopover";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useHookstate } from '@hookstate/core';
+import { authState } from '@/state/auth';
 
 const Header = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // Temporary state - replace with actual auth
+  const auth = useHookstate(authState);
+  const isLoggedIn = !!auth.user.get();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -59,11 +62,13 @@ const Header = () => {
                 </div>
               </NavigationMenuContent>
             </NavigationMenuItem>
-            <NavigationMenuItem>
-              <Link to="/dashboard">
-                <Button variant="ghost">Dashboard</Button>
-              </Link>
-            </NavigationMenuItem>
+            {isLoggedIn && (
+              <NavigationMenuItem>
+                <Link to="/dashboard">
+                  <Button variant="ghost">Dashboard</Button>
+                </Link>
+              </NavigationMenuItem>
+            )}
             <NavigationMenuItem>
               <Link to="/contact">
                 <Button variant="ghost">Contact Us</Button>
@@ -88,13 +93,13 @@ const Header = () => {
             </div>
           ) : (
             <>
-              <Link to="/login">
+              <Link to="/auth">
                 <Button variant="outline" size="sm" className="gap-2">
                   <LogIn className="w-4 h-4" />
                   Login
                 </Button>
               </Link>
-              <Link to="/signup">
+              <Link to="/auth">
                 <Button size="sm" className="gap-2 bg-[#673AB7] hover:bg-[#512DA8]">
                   <UserPlus className="w-4 h-4" />
                   Sign Up
