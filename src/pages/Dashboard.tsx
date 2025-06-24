@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useHookstate } from '@hookstate/core';
 import { authState, signOut } from "@/state/auth";
@@ -58,7 +57,7 @@ const Dashboard = () => {
             .from('contacts')
             .select(`
               contact_id,
-              profiles:contact_id (
+              profiles!contacts_contact_id_fkey (
                 id, 
                 username, 
                 avatar_url
@@ -72,13 +71,15 @@ const Dashboard = () => {
           }
 
           if (data) {
-            const contactsData = data.map(contact => ({
-              id: contact.profiles?.id || contact.contact_id,
-              email: '', 
-              fullName: contact.profiles?.username || '', 
-              username: contact.profiles?.username || '',
-              avatarUrl: contact.profiles?.avatar_url,
-            }));
+            const contactsData = data
+              .filter(contact => contact.profiles) // Filter out any null profiles
+              .map(contact => ({
+                id: contact.profiles!.id,
+                email: '', 
+                fullName: contact.profiles!.username || '', 
+                username: contact.profiles!.username || '',
+                avatarUrl: contact.profiles!.avatar_url,
+              }));
             setContacts(contactsData);
           }
         } catch (error) {
