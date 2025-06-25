@@ -1,120 +1,109 @@
 
 import React from 'react';
-import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
-import { Check } from "lucide-react";
-
-const plans = [
-  {
-    name: 'Free',
-    price: '$0',
-    description: 'Basic secure messaging',
-    features: [
-      'End-to-end encrypted messages',
-      'Web access',
-      'Basic file encryption',
-      'Up to 5 secure contacts',
-      '7-day message history'
-    ],
-    buttonText: 'Get Started',
-    buttonVariant: 'outline',
-    buttonLink: '/auth'
-  },
-  {
-    name: 'Premium',
-    price: '$9.99',
-    period: 'per month',
-    description: 'Advanced security for individuals',
-    features: [
-      'Everything in Free',
-      'Unlimited secure contacts',
-      'Unlimited message history',
-      'Advanced file encryption',
-      'Password-protected messages',
-      'Message self-destruct timer',
-      'Priority support'
-    ],
-    buttonText: 'Go Premium',
-    buttonVariant: 'default',
-    buttonLink: '/auth',
-    highlight: true
-  },
-  {
-    name: 'Team',
-    price: '$19.99',
-    period: 'per user/month',
-    description: 'Security for organizations',
-    features: [
-      'Everything in Premium',
-      'Team management console',
-      'Enterprise-grade encryption',
-      'Compliance features',
-      'Audit logs',
-      'SSO integration',
-      'Dedicated support'
-    ],
-    buttonText: 'Contact Sales',
-    buttonVariant: 'outline',
-    buttonLink: '/contact'
-  }
-];
+import { Button } from '@/components/ui/button';
+import { Check } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const PricingSection = () => {
+  const plans = [
+    {
+      name: "Free",
+      price: "$0",
+      period: "forever",
+      features: [
+        "End-to-end encryption",
+        "Up to 10 contacts",
+        "Basic messaging",
+        "Community support"
+      ],
+      popular: false
+    },
+    {
+      name: "Pro",
+      price: "$9.99",
+      period: "per month",
+      features: [
+        "Everything in Free",
+        "Unlimited contacts",
+        "File sharing",
+        "Priority support",
+        "Advanced encryption tools"
+      ],
+      popular: true
+    },
+    {
+      name: "Enterprise",
+      price: "Custom",
+      period: "contact us",
+      features: [
+        "Everything in Pro",
+        "Custom deployment",
+        "Advanced admin tools",
+        "24/7 dedicated support",
+        "Compliance certifications"
+      ],
+      popular: false
+    }
+  ];
+
   return (
-    <section className="py-20 bg-background" id="pricing">
+    <section className="py-20 bg-white">
       <div className="container mx-auto px-4">
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <h2 className="text-3xl font-bold mb-4">Simple, Transparent Pricing</h2>
-          <p className="text-lg text-muted-foreground">
-            Choose the plan that fits your needs. All plans include our core security features.
+        <div className="text-center mb-16">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            Choose Your Plan
+          </h2>
+          <p className="text-xl text-muted-foreground">
+            Start free and upgrade when you're ready for more features.
           </p>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        
+        <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
           {plans.map((plan, index) => (
-            <div 
-              key={index} 
-              className={`rounded-xl border ${
-                plan.highlight 
-                  ? 'shadow-lg border-primary/50 relative' 
-                  : 'shadow-sm'
-              } bg-card overflow-hidden`}
+            <div
+              key={index}
+              className={`relative p-8 rounded-lg border ${
+                plan.popular
+                  ? 'border-primary shadow-lg'
+                  : 'border-gray-200'
+              }`}
             >
-              {plan.highlight && (
-                <div className="absolute top-0 right-0 bg-primary text-primary-foreground px-3 py-1 text-xs font-medium rounded-bl-lg">
-                  Popular
+              {plan.popular && (
+                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                  <span className="bg-primary text-white px-4 py-1 rounded-full text-sm">
+                    Most Popular
+                  </span>
                 </div>
               )}
               
-              <div className="p-6">
-                <h3 className="text-2xl font-bold mb-1">{plan.name}</h3>
-                <div className="flex items-end mb-4">
-                  <span className="text-3xl font-bold">{plan.price}</span>
-                  {plan.period && <span className="text-muted-foreground ml-1">{plan.period}</span>}
+              <div className="text-center mb-8">
+                <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
+                <div className="mb-4">
+                  <span className="text-4xl font-bold">{plan.price}</span>
+                  <span className="text-muted-foreground">/{plan.period}</span>
                 </div>
-                <p className="text-muted-foreground mb-6">{plan.description}</p>
-                
-                <Link to={plan.buttonLink}>
-                  <Button 
-                    variant={plan.buttonVariant as "default" | "outline"} 
-                    className="w-full"
-                  >
-                    {plan.buttonText}
-                  </Button>
-                </Link>
               </div>
               
-              <div className="border-t p-6">
-                <p className="font-medium mb-4">What's included:</p>
-                <ul className="space-y-2">
-                  {plan.features.map((feature, i) => (
-                    <li key={i} className="flex items-start">
-                      <Check className="h-5 w-5 text-primary mr-2 flex-shrink-0" />
-                      <span className="text-sm">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              <ul className="space-y-3 mb-8">
+                {plan.features.map((feature, featureIndex) => (
+                  <li key={featureIndex} className="flex items-center">
+                    <Check className="w-5 h-5 text-green-500 mr-3" />
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+              
+              <Link to="/auth" className="block">
+                <Button
+                  className={`w-full ${
+                    plan.popular
+                      ? 'bg-primary hover:bg-primary/90'
+                      : 'bg-gray-900 hover:bg-gray-800'
+                  }`}
+                >
+                  Get Started
+                </Button>
+              </Link>
             </div>
           ))}
         </div>

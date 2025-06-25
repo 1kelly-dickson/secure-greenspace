@@ -2,71 +2,53 @@
 import React from 'react';
 import { Star } from 'lucide-react';
 
-const testimonials = [
-  {
-    name: 'Alex Johnson',
-    role: 'Software Developer',
-    content: 'Finally, a secure messaging app that doesn\'t compromise on usability. I use this daily for all my sensitive communications with clients.',
-    avatar: 'https://avatar.vercel.sh/alex',
-    rating: 5,
-  },
-  {
-    name: 'Maria Garcia',
-    role: 'Privacy Advocate',
-    content: 'The encryption tools offered here have been a game-changer for my organization. We can confidently share sensitive documents knowing they\'re protected.',
-    avatar: 'https://avatar.vercel.sh/maria',
-    rating: 5,
-  },
-  {
-    name: 'David Chen',
-    role: 'IT Security Specialist',
-    content: 'After testing numerous security solutions, this platform stands out for its robust encryption and intuitive interface. Highly recommended for teams.',
-    avatar: 'https://avatar.vercel.sh/david',
-    rating: 4,
-  },
-];
-
 const TestimonialsSection = () => {
+  const testimonials = [
+    {
+      name: "Sarah Johnson",
+      role: "Privacy Advocate",
+      content: "SecureText gives me the peace of mind I need when communicating sensitive information. The encryption is top-notch.",
+      rating: 5
+    },
+    {
+      name: "Michael Chen",
+      role: "Business Owner",
+      content: "We use SecureText for all our internal communications. It's secure, reliable, and easy to use.",
+      rating: 5
+    },
+    {
+      name: "Emily Rodriguez",
+      role: "Journalist",
+      content: "As a journalist, protecting my sources is crucial. SecureText provides the security I need without compromising usability.",
+      rating: 5
+    }
+  ];
+
   return (
-    <section className="py-20 bg-muted/30">
+    <section className="py-20 bg-gray-50">
       <div className="container mx-auto px-4">
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <h2 className="text-3xl font-bold mb-4">What Our Users Say</h2>
-          <p className="text-lg text-muted-foreground">
-            Don't just take our word for it - see what our users have to say about our secure communication platform.
+        <div className="text-center mb-16">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            What Our Users Say
+          </h2>
+          <p className="text-xl text-muted-foreground">
+            Join thousands of satisfied users who trust SecureText for their secure communications.
           </p>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        
+        <div className="grid md:grid-cols-3 gap-8">
           {testimonials.map((testimonial, index) => (
-            <div 
-              key={index} 
-              className="p-6 rounded-xl bg-gradient-to-br from-card to-background border shadow-sm hover:shadow-md transition-shadow"
-            >
-              <div className="flex mb-4 items-center">
-                <img
-                  src={testimonial.avatar}
-                  alt={testimonial.name}
-                  className="h-12 w-12 rounded-full mr-4"
-                />
-                <div>
-                  <h4 className="font-medium">{testimonial.name}</h4>
-                  <p className="text-sm text-muted-foreground">{testimonial.role}</p>
-                </div>
-              </div>
-              
-              <div className="flex mb-3">
-                {[...Array(5)].map((_, i) => (
-                  <Star
-                    key={i}
-                    className={`w-4 h-4 ${
-                      i < testimonial.rating ? 'fill-primary text-primary' : 'text-muted'
-                    }`}
-                  />
+            <div key={index} className="bg-white p-6 rounded-lg shadow-sm">
+              <div className="flex mb-4">
+                {[...Array(testimonial.rating)].map((_, i) => (
+                  <Star key={i} className="w-5 h-5 text-yellow-400 fill-current" />
                 ))}
               </div>
-              
-              <p className="text-muted-foreground">{testimonial.content}</p>
+              <p className="text-muted-foreground mb-4">"{testimonial.content}"</p>
+              <div>
+                <p className="font-semibold">{testimonial.name}</p>
+                <p className="text-sm text-muted-foreground">{testimonial.role}</p>
+              </div>
             </div>
           ))}
         </div>
