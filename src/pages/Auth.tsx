@@ -10,6 +10,40 @@ import { useHookstate } from '@hookstate/core';
 import { authState } from "@/state/auth";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from '@/integrations/supabase/client';
+import { z } from 'zod';
+
+// Email validation schema with comprehensive checks
+const emailSchema = z.string()
+  .trim()
+  .min(1, "Email is required")
+  .email("Please enter a valid email address")
+  .max(255, "Email must be less than 255 characters")
+  .refine((email) => {
+    // Check for valid email format with proper domain
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    return emailRegex.test(email);
+  }, "Email must have a valid domain (e.g., user@example.com)")
+  .refine((email) => {
+    // Prevent disposable/temporary email domains (common ones)
+    const disposableDomains = ['tempmail.com', 'throwaway.email', '10minutemail.com', 'guerrillamail.com'];
+    const domain = email.split('@')[1]?.toLowerCase();
+    return !disposableDomains.includes(domain);
+  }, "Temporary email addresses are not allowed");
+
+// Password validation schema
+const passwordSchema = z.string()
+  .min(8, "Password must be at least 8 characters")
+  .max(72, "Password must be less than 72 characters")
+  .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+  .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+  .regex(/[0-9]/, "Password must contain at least one number");
+
+// Username validation schema
+const usernameSchema = z.string()
+  .trim()
+  .min(3, "Username must be at least 3 characters")
+  .max(30, "Username must be less than 30 characters")
+  .regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers, and underscores");
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -19,6 +53,7 @@ const Auth = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [usernameOrEmail, setUsernameOrEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const navigate = useNavigate();
   const auth = useHookstate(authState);
   const { toast } = useToast();
@@ -56,6 +91,7 @@ const Auth = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setErrors({});
 
     if (isLogin) {
       // Login logic - support both email and username
@@ -121,22 +157,41 @@ const Auth = () => {
         });
       }
     } else {
-      // Sign up logic
-      if (password !== confirmPassword) {
-        toast({
-          variant: "destructive",
-          title: "Password mismatch",
-          description: "Passwords do not match. Please try again.",
-        });
-        setIsLoading(false);
-        return;
+      // Sign up logic - validate all inputs
+      const validationErrors: Record<string, string> = {};
+
+      // Validate email
+      const emailResult = emailSchema.safeParse(email);
+      if (!emailResult.success) {
+        validationErrors.email = emailResult.error.errors[0].message;
       }
 
-      if (password.length < 6) {
+      // Validate password
+      const passwordResult = passwordSchema.safeParse(password);
+      if (!passwordResult.success) {
+        validationErrors.password = passwordResult.error.errors[0].message;
+      }
+
+      // Validate username if provided
+      if (fullName) {
+        const usernameResult = usernameSchema.safeParse(fullName);
+        if (!usernameResult.success) {
+          validationErrors.fullName = usernameResult.error.errors[0].message;
+        }
+      }
+
+      // Check if passwords match
+      if (password !== confirmPassword) {
+        validationErrors.confirmPassword = "Passwords don't match";
+      }
+
+      // If there are validation errors, show them and stop
+      if (Object.keys(validationErrors).length > 0) {
+        setErrors(validationErrors);
         toast({
           variant: "destructive",
-          title: "Password too short",
-          description: "Password must be at least 6 characters long.",
+          title: "Validation Error",
+          description: Object.values(validationErrors)[0],
         });
         setIsLoading(false);
         return;
@@ -219,15 +274,25 @@ const Auth = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
               <div className="grid gap-2">
-                <Label htmlFor="fullName">Full Name</Label>
+                <Label htmlFor="fullName">Username</Label>
                 <Input
                   id="fullName"
                   type="text"
                   value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Enter your full name"
+                  onChange={(e) => {
+                    setFullName(e.target.value);
+                    setErrors((prev) => ({ ...prev, fullName: '' }));
+                  }}
+                  placeholder="Choose a unique username (3-30 characters)"
+                  className={errors.fullName ? 'border-destructive' : ''}
                   required={!isLogin}
                 />
+                {errors.fullName && (
+                  <p className="text-sm text-destructive">{errors.fullName}</p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Letters, numbers, and underscores only
+                </p>
               </div>
             )}
 
@@ -250,10 +315,17 @@ const Auth = () => {
                   id="email"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setErrors((prev) => ({ ...prev, email: '' }));
+                  }}
                   placeholder="Enter your email"
+                  className={errors.email ? 'border-destructive' : ''}
                   required={!isLogin}
                 />
+                {errors.email && (
+                  <p className="text-sm text-destructive">{errors.email}</p>
+                )}
               </div>
             )}
 
@@ -263,10 +335,22 @@ const Auth = () => {
                 id="password"
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setErrors((prev) => ({ ...prev, password: '' }));
+                }}
                 placeholder="Enter your password"
+                className={errors.password ? 'border-destructive' : ''}
                 required
               />
+              {errors.password && (
+                <p className="text-sm text-destructive">{errors.password}</p>
+              )}
+              {!isLogin && (
+                <p className="text-xs text-muted-foreground">
+                  Must be 8+ characters with uppercase, lowercase, and numbers
+                </p>
+              )}
             </div>
 
             {!isLogin && (
@@ -276,10 +360,17 @@ const Auth = () => {
                   id="confirmPassword"
                   type="password"
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    setErrors((prev) => ({ ...prev, confirmPassword: '' }));
+                  }}
                   placeholder="Confirm your password"
+                  className={errors.confirmPassword ? 'border-destructive' : ''}
                   required={!isLogin}
                 />
+                {errors.confirmPassword && (
+                  <p className="text-sm text-destructive">{errors.confirmPassword}</p>
+                )}
               </div>
             )}
 

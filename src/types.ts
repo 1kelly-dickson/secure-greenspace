@@ -9,9 +9,10 @@ export interface UserProfile {
 
 export interface Notification {
   id: string;
+  user_id: string;
+  title: string;
+  message: string;
   type: string;
-  content: string;
-  created_at: string;
   is_read: boolean;
-  sender_id?: string;
+  created_at: string;
 }
