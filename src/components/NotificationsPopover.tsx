@@ -113,7 +113,8 @@ const NotificationsPopover = () => {
                     !notification.is_read ? 'bg-blue-50 border-blue-200' : 'bg-gray-50'
                   }`}
                 >
-                  <p className="text-sm">{notification.content}</p>
+                  <p className="text-sm font-medium">{notification.title}</p>
+                  <p className="text-xs">{notification.message}</p>
                   <p className="text-xs text-muted-foreground">
                     {new Date(notification.created_at).toLocaleString()}
                   </p>
